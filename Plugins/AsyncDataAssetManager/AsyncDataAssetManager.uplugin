@@ -1,0 +1,28 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Async Data Asset Manager",
+	"Description": "Asynchronous management of data assets.",
+	"Category": "Async Technologies",
+	"CreatedBy": "Pavel Gornostaev",
+	"CreatedByURL": "https://github.com/Pavreally",
+	"DocsURL": "https://github.com/Pavreally/AsyncDataAssetManager",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EngineVersion": "5.5.0",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "AsyncDataAssetManager",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64",
+				"Android"
+			]
+		}
+	]
+}
