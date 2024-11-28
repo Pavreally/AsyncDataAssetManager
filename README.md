@@ -5,6 +5,7 @@
 ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous loading and unloading of Data Assets. This subsystem simplifies data management and can be used in both Blueprints and C++.
 
 <br>
+
 > [!NOTE]
 > The plugin has been pre-packaged only for Win64 and Android.
 
