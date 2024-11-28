@@ -2,14 +2,20 @@
 
 # Async Data Asset Manager
 `BETA`<br><br>
-ADAM is a plugin for Unreal Engine 5 that adds a subsystem for managing asynchronous loading and unloading of Data Assets. This subsystem simplifies the approach to data management, which can be used in both Blueprint and C++.
+ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous loading and unloading of Data Assets. This subsystem simplifies data management and can be used in both Blueprints and C++.
 
-<br><br><i>(The plugin has been pre-packaged only for Win64 and Android)</i>
+<br>
+> [!NOTE]
+> The plugin has been pre-packaged only for Win64 and Android.
 
 # Latest Updates
-`Version 1.0`
+`Version 1.1`
 - Build version for Unreal Engine 5.5.
-- Release experimental version of the plugin.
+- Refactoring and optimization of the code.
+- Enhanced security for memory resource management.
+- Added the ability to specify a tag for uploaded files.
+- Added a new function `UnloadAllTagsADAM`, which will unload DataAssets stored in memory by the specified tag.
+- Added a new function `GetCollectionByTagADAM`, which will display a list of tags stored in the ADAM system (including default tags - NONE) and their total count.
 
 ## What it's for
 - Load and unload Data Assets asynchronously using simple functions.
@@ -19,6 +25,7 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for managing asynchro
 - Fast and simple management of asynchronous Data Asset loading without the need to use C++ code.
 - The ADAM subsystem supports parallel asynchronous loading of Data Assets from multiple sources, controlling random duplicate load and unload requests in real-time.
 - Supports bulk asynchronous loading of unique Data Assets.
+- Group your uploaded DataAssets using tags so that they can be unloaded at the right moment <i>(for example, this can be useful if you are uploading DataAssets in parts and want to unload them without affecting other necessary data still stored in memory)</i>.
 - Supports asynchronous loading without memory retention (e.g., if you need to immediately access data and then free up memory).
 - Disableable debug logs allow you to monitor the entire asynchronous data management process. Plugin settings are located in `Project Settings > Plugins > Async Technologies - ADAM`.
 
@@ -36,4 +43,4 @@ An interactive step-by-step tutorial on how to use ADAM can be found in the file
 ![Window Manager](./_Misc/Tutorial/Tutorial_3.jpg)
 
 ## (C++) Documentaion
-All sources contain self-documenting code. C++ and BP functions are completely identical and interchangeable.
+All sources contain self-documenting code.

@@ -7,7 +7,7 @@
 #include "AsyncTechnologiesSettings.h"
 
 // Initialize subsystem
-void UAsyncDataAssetManagerSubsystem::Initialize(FSubsystemCollectionBase &Collection)
+void UAsyncDataAssetManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
@@ -24,13 +24,13 @@ void UAsyncDataAssetManagerSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 
-	DataADAM.Empty();
+	UnloadAllADAM(true);
 
 	OnLoadedADAM.Clear();
 }
 
 // BlueprintCallable Function. Asynchronous loading of Primary Data Asset
-void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, TSoftObjectPtr<UPrimaryDataAsset> &ReturnPrimaryDataAsset)
+void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset)
 {
 	if (PrimaryDataAsset.IsNull())
 	{
@@ -49,14 +49,14 @@ void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset>
 	}
 
 	// Add in array ADAM and async load
-	AddToADAM(PrimaryDataAsset);
+	AddToADAM(PrimaryDataAsset, Tag);
 
 	// Return the value of a soft link
 	ReturnPrimaryDataAsset = PrimaryDataAsset;
 }
 
 // BlueprintCallable Function. Asynchronous loading of an array of Primary Data Asset
-void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, TArray<TSoftObjectPtr<UPrimaryDataAsset>> &ReturnPrimaryDataAssets)
+void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FName Tag, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets)
 {
 	if (PrimaryDataAssets.IsEmpty())
 	{
@@ -77,7 +77,7 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 		}
 
 		// Add in array ADAM and async load
-		AddToADAM(DataAsset);
+		AddToADAM(DataAsset, Tag);
 	}
 
 	// Return an array of soft links
@@ -85,7 +85,7 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 }
 
 // Add Data Asset to the ADAM array and load asynchronously
-void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset)
+void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag)
 {
 	// Create a delegate
 	FStreamableManager& StreamableManager = UAssetManager::GetStreamableManager();
@@ -110,6 +110,7 @@ void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset
 	FMemoryADAM NewDataAsset;
 	NewDataAsset.SoftReference = PrimaryDataAsset;
 	NewDataAsset.MemoryReference = DataAssetHandle;
+	NewDataAsset.Tag = Tag;
 	DataADAM.Add(NewDataAsset);
 }
 
@@ -131,7 +132,7 @@ void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset>
 }
 
 // Loading a Data Asset without storing it in memory
-void UAsyncDataAssetManagerSubsystem::FastLoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, TSoftObjectPtr<UPrimaryDataAsset> &ReturnPrimaryDataAsset)
+void UAsyncDataAssetManagerSubsystem::FastLoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset)
 {
 	if (PrimaryDataAsset.IsNull())
 	{
@@ -178,14 +179,17 @@ void UAsyncDataAssetManagerSubsystem::UnloadADAM(TSoftObjectPtr<UPrimaryDataAsse
 		return;
 	}
 
+	// Deletion of target data from ADAM if deletion by tag was not triggered.
 	int32 TargetIndex = GetIndexDataADAM(PrimaryDataAsset);
 
-	RemoveFromADAM(TargetIndex, ForcedUnload);
+	if (TargetIndex == -1) return;
 
 	if (EnableLog)
 	{
 		UE_LOG(LogTemp, Display, TEXT("ADAM: Unload data asset \"%s\" (index: %d)"), *PrimaryDataAsset.GetAssetName(), TargetIndex);
 	}
+
+	RemoveFromADAM(TargetIndex, ForcedUnload);
 }
 
 // BlueprintCallable Function. Unload all items from the ADAM collection
@@ -197,13 +201,35 @@ void UAsyncDataAssetManagerSubsystem::UnloadAllADAM(bool ForcedUnload)
 		return;
 	}
 
+	// Remove all from ADAM
 	for (int32 i = DataADAM.Num() - 1; i >= 0; i--)
 	{
-		RemoveFromADAM(i, ForcedUnload);
-
 		if (EnableLog)
 		{
 			UE_LOG(LogTemp, Display, TEXT("ADAM: Unload data asset (index: %d)"), i);
+		}
+
+		RemoveFromADAM(i, ForcedUnload);
+	}
+}
+
+// Unload all data assets with the specified tag from the array and memory. Unloading in descending order.
+void UAsyncDataAssetManagerSubsystem::UnloadAllTagsADAM(FName Tag, bool ForcedUnload)
+{
+	// Remove of all data with a similar target tag
+	if (Tag != "None")
+	{
+		for (int32 i = DataADAM.Num() - 1; i >= 0; i--)
+		{
+			if (DataADAM[i].Tag == Tag)
+			{
+				if (EnableLog)
+				{
+					UE_LOG(LogTemp, Display, TEXT("ADAM: Unload data asset \"%s\" (index: %d)"), *DataADAM[i].SoftReference.GetAssetName(), i);
+				}
+
+				RemoveFromADAM(i, ForcedUnload);
+			}
 		}
 	}
 }
@@ -231,25 +257,50 @@ void UAsyncDataAssetManagerSubsystem::RemoveFromADAM(int32 DataAssetIndex, bool 
 	}
 }
 
-// BlueprintCallable Function. Return the length of the main array of the subsystem - DataADAM 
-void UAsyncDataAssetManagerSubsystem::GetDataADAM(TArray<FMirrorADAM> &MirrorDataADAM, int32 &Length)
+// BlueprintCallable Function. Returns the ADAM mirror array formed it the main array with a reference to the destructor.
+TArray<FMirrorADAM> UAsyncDataAssetManagerSubsystem::GetDataADAM()
 {
-	Length = DataADAM.Num();
+	int32 Length = DataADAM.Num();
+	TArray<FMirrorADAM> MirrorDataADAM;
 
-	if (Length >= 0)
+	if (Length == 0) return MirrorDataADAM;
+
+	for (int32 i = 0; i < Length; i++)
 	{
-		for (int32 i = 0; i < Length; i++)
+		FMirrorADAM MirrorDataAsset;
+		MirrorDataAsset.PrimaryDataAssetName = DataADAM[i].SoftReference.GetAssetName();
+		MirrorDataAsset.SoftReference = DataADAM[i].SoftReference;
+		MirrorDataAsset.Tag = DataADAM[i].Tag;
+		MirrorDataADAM.Add(MirrorDataAsset);
+	}
+
+	return MirrorDataADAM;
+}
+
+// BlueprintCallable Function. Returns an TMap that shows how many data items there are in the ADAM system for each unique tag.
+TMap<FName, int32> UAsyncDataAssetManagerSubsystem::GetCollectionByTagADAM()
+{
+	TMap<FName, int32> TagCollection;
+
+	if (DataADAM.Num() == 0) return TagCollection;
+
+	for (const FMemoryADAM& Data : DataADAM)
+	{
+		if (TagCollection.Contains(Data.Tag))
 		{
-			FMirrorADAM MirrorDataAsset;
-			MirrorDataAsset.PrimaryDataAssetName = DataADAM[i].SoftReference.GetAssetName();
-			MirrorDataAsset.SoftReference = DataADAM[i].SoftReference;
-			MirrorDataADAM.Add(MirrorDataAsset);
+			TagCollection[Data.Tag]++;
+		}
+		else
+		{
+			TagCollection.Add(Data.Tag, 1);
 		}
 	}
+
+	return TagCollection;
 }
 
 // BlueprintCallable Function. Returns a pointer to the Data Asset (ADAM) object stored in memory.
-UObject* UAsyncDataAssetManagerSubsystem::GetObjectDataADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, bool &IsValid )
+UObject* UAsyncDataAssetManagerSubsystem::GetObjectDataADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, bool& IsValid )
 {
 	if (PrimaryDataAsset.IsNull())
 	{
