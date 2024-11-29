@@ -10,13 +10,10 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 > The plugin has been pre-packaged only for Win64 and Android.
 
 # Latest Updates
-`Version 1.1`
+`Version 1.2`
 - Build version for Unreal Engine 5.5.
 - Refactoring and optimization of the code.
-- Enhanced security for memory resource management.
-- Added the ability to specify a tag for uploaded files.
-- Added a new function `UnloadAllTagsADAM`, which will unload DataAssets stored in memory by the specified tag.
-- Added a new function `GetCollectionByTagADAM`, which will display a list of tags stored in the ADAM system (including default tags - NONE) and their total count.
+- `NEW!` Added Support for Recursive Loading. This feature enables recursive loading, meaning if you have a Data Asset that contains other Data Assets, and so on, enabling the recursive loading option will load the entire nested collection into memory. The data will be filtered to prevent duplicate entries.
 
 ## What it's for
 - Load and unload Data Assets asynchronously using simple functions.
@@ -26,8 +23,9 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 - Fast and simple management of asynchronous Data Asset loading without the need to use C++ code.
 - The ADAM subsystem supports parallel asynchronous loading of Data Assets from multiple sources, controlling random duplicate load and unload requests in real-time.
 - Supports bulk asynchronous loading of unique Data Assets.
+- This subsystem enables recursive data loading. If you load a single DataAsset that includes multiple nested Data Assets, all of them will be loaded and filtered to avoid duplicates in memory.
 - Group your uploaded DataAssets using tags so that they can be unloaded at the right moment <i>(for example, this can be useful if you are uploading DataAssets in parts and want to unload them without affecting other necessary data still stored in memory)</i>.
-- Supports asynchronous loading without memory retention (e.g., if you need to immediately access data and then free up memory).
+- Supports asynchronous loading without memory retention <i>(e.g., if you need to immediately access data and then free up memory)</i>.
 - Disableable debug logs allow you to monitor the entire asynchronous data management process. Plugin settings are located in `Project Settings > Plugins > Async Technologies - ADAM`.
 
 ## Install

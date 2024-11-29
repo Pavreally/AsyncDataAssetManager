@@ -30,11 +30,11 @@ void UAsyncDataAssetManagerSubsystem::Deinitialize()
 }
 
 // BlueprintCallable Function. Asynchronous loading of Primary Data Asset
-void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset)
+void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset)
 {
 	if (PrimaryDataAsset.IsNull())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ADAM (Load): No reference is specified in the \"LoadADAM\" function."));
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Load): No reference is specified in function."));
 		return;
 	}
 
@@ -49,22 +49,22 @@ void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset>
 	}
 
 	// Add in array ADAM and async load
-	AddToADAM(PrimaryDataAsset, Tag);
+	AddToADAM(PrimaryDataAsset, Tag, RecursiveLoading);
 
 	// Return the value of a soft link
 	ReturnPrimaryDataAsset = PrimaryDataAsset;
 }
 
 // BlueprintCallable Function. Asynchronous loading of an array of Primary Data Asset
-void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FName Tag, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets)
+void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FName Tag, bool RecursiveLoading, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets)
 {
 	if (PrimaryDataAssets.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ADAM (Load Array): No reference is specified in the \"LoadADAM\" function."));
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Load Array): No reference is specified in function."));
 		return;
 	}
 
-	for (TSoftObjectPtr<UPrimaryDataAsset> DataAsset : PrimaryDataAssets)
+	for (TSoftObjectPtr<UPrimaryDataAsset>& DataAsset : PrimaryDataAssets)
 	{
 		// Stop execution if there is a duplicate in memory
 		if (GetIndexDataADAM(DataAsset) >= 0)
@@ -77,7 +77,7 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 		}
 
 		// Add in array ADAM and async load
-		AddToADAM(DataAsset, Tag);
+		AddToADAM(DataAsset, Tag, RecursiveLoading);
 	}
 
 	// Return an array of soft links
@@ -85,28 +85,28 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 }
 
 // Add Data Asset to the ADAM array and load asynchronously
-void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag)
+void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading)
 {
+	// Add Queue
+	FString DataAssetName = PrimaryDataAsset.GetAssetName();
+	if (QueueADAM.Contains(DataAssetName))
+	{
+		return;
+	}
+	QueueADAM.Add(DataAssetName);
+
 	// Create a delegate
 	FStreamableManager& StreamableManager = UAssetManager::GetStreamableManager();
 	FStreamableDelegate Delegate = FStreamableDelegate::CreateUObject(
 			this,
 			&UAsyncDataAssetManagerSubsystem::OnLoaded,
-			PrimaryDataAsset);
-
-	// Add Queue
-	FString DataAssetName = PrimaryDataAsset.GetAssetName();
-	
-	if (QueueADAM.Find(DataAssetName) != INDEX_NONE) 
-	{
-		return;
-	}
-
-	QueueADAM.Add(DataAssetName);
+			PrimaryDataAsset,
+			Tag,
+			RecursiveLoading);
 
 	// Determine whether the descriptor will be declared and stored
 	TSharedPtr<FStreamableHandle> DataAssetHandle = StreamableManager.RequestAsyncLoad(PrimaryDataAsset.ToSoftObjectPath(),	Delegate);
-	
+
 	FMemoryADAM NewDataAsset;
 	NewDataAsset.SoftReference = PrimaryDataAsset;
 	NewDataAsset.MemoryReference = DataAssetHandle;
@@ -115,16 +115,27 @@ void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset
 }
 
 // Delegate notification after loading Data Asset into ADAM subsystem
-void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset)
+void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading)
 {
-	UObject* LoadedObject =	PrimaryDataAsset.Get();
+	UPrimaryDataAsset* LoadedObject =	PrimaryDataAsset.Get();
+
+	if (!LoadedObject)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (On Loaded): Received a null value."));
+		return;
+	}
 
 	// Inform the FOnLoadedADAM subsystem delegate that the loading is complete
-	OnLoadedADAM.Broadcast(LoadedObject, PrimaryDataAsset);
+	OnLoadedADAM.Broadcast(LoadedObject, PrimaryDataAsset, Tag, RecursiveLoading);
+
+	if (RecursiveLoading && FindNestedAssets(LoadedObject).Num() != 0)
+	{
+		RecursiveLoad(PrimaryDataAsset, Tag);
+	}
 
 	if (EnableLog)
 	{
-		UE_LOG(LogTemp, Display, TEXT("ADAM: Data Asset \"%s\" is loaded."), *PrimaryDataAsset.GetAssetName());
+		UE_LOG(LogTemp, Display, TEXT("ADAM (On Loaded): Data Asset \"%s\" is loaded."), *PrimaryDataAsset.GetAssetName());
 	}
 
 	// Clear Queue
@@ -136,7 +147,7 @@ void UAsyncDataAssetManagerSubsystem::FastLoadADAM(TSoftObjectPtr<UPrimaryDataAs
 {
 	if (PrimaryDataAsset.IsNull())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ADAM (Fast Load): No reference is specified in the \"LoadADAM\" function."));
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Fast Load): No reference is specified in function."));
 		return;
 	}
 
@@ -152,10 +163,14 @@ void UAsyncDataAssetManagerSubsystem::FastLoadADAM(TSoftObjectPtr<UPrimaryDataAs
 
 	// Create a delegate
 	FStreamableManager& StreamableManager = UAssetManager::GetStreamableManager();
+	// Create an empty argument to populate the delegate
+	FName Tag;
 	FStreamableDelegate Delegate = FStreamableDelegate::CreateUObject(
 			this,
 			&UAsyncDataAssetManagerSubsystem::OnLoaded,
-			PrimaryDataAsset);
+			PrimaryDataAsset,
+			Tag,
+			false);
 
 	// Determine whether the descriptor will be declared and stored
 	TSharedPtr<FStreamableHandle> DataAssetHandle = StreamableManager.RequestAsyncLoad(PrimaryDataAsset.ToSoftObjectPath(),	Delegate);
@@ -175,7 +190,7 @@ void UAsyncDataAssetManagerSubsystem::UnloadADAM(TSoftObjectPtr<UPrimaryDataAsse
 
 	if (DataADAM.Num() == 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Nothing to delete. The \"DataADAM\" array is empty."));
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Unload): Nothing to delete. The \"DataADAM\" array is empty."));
 		return;
 	}
 
@@ -186,7 +201,7 @@ void UAsyncDataAssetManagerSubsystem::UnloadADAM(TSoftObjectPtr<UPrimaryDataAsse
 
 	if (EnableLog)
 	{
-		UE_LOG(LogTemp, Display, TEXT("ADAM: Unload data asset \"%s\" (index: %d)"), *PrimaryDataAsset.GetAssetName(), TargetIndex);
+		UE_LOG(LogTemp, Display, TEXT("ADAM (Unload): Unload data asset \"%s\" (index: %d)"), *PrimaryDataAsset.GetAssetName(), TargetIndex);
 	}
 
 	RemoveFromADAM(TargetIndex, ForcedUnload);
@@ -197,7 +212,7 @@ void UAsyncDataAssetManagerSubsystem::UnloadAllADAM(bool ForcedUnload)
 {
 	if (DataADAM.Num() == 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Nothing to delete. The \"DataADAM\" array is empty."));
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Unload All ADAM): Nothing to delete. The \"DataADAM\" array is empty."));
 		return;
 	}
 
@@ -206,7 +221,7 @@ void UAsyncDataAssetManagerSubsystem::UnloadAllADAM(bool ForcedUnload)
 	{
 		if (EnableLog)
 		{
-			UE_LOG(LogTemp, Display, TEXT("ADAM: Unload data asset (index: %d)"), i);
+			UE_LOG(LogTemp, Display, TEXT("ADAM (Unload All ADAM): Unload data asset (index: %d)"), i);
 		}
 
 		RemoveFromADAM(i, ForcedUnload);
@@ -225,7 +240,7 @@ void UAsyncDataAssetManagerSubsystem::UnloadAllTagsADAM(FName Tag, bool ForcedUn
 			{
 				if (EnableLog)
 				{
-					UE_LOG(LogTemp, Display, TEXT("ADAM: Unload data asset \"%s\" (index: %d)"), *DataADAM[i].SoftReference.GetAssetName(), i);
+					UE_LOG(LogTemp, Display, TEXT("ADAM (Unload All Tags ADAM): Unload data asset \"%s\" (index: %d)"), *DataADAM[i].SoftReference.GetAssetName(), i);
 				}
 
 				RemoveFromADAM(i, ForcedUnload);
@@ -252,7 +267,7 @@ void UAsyncDataAssetManagerSubsystem::RemoveFromADAM(int32 DataAssetIndex, bool 
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ADAM (Unload): Attempting to unload a Data Asset \"%s\" (index: %d) that does not exist in memory."), *DataADAM[DataAssetIndex].SoftReference.GetAssetName(), DataAssetIndex);
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Remove From ADAM): Attempting to unload a Data Asset \"%s\" (index: %d) that does not exist in memory."), *DataADAM[DataAssetIndex].SoftReference.GetAssetName(), DataAssetIndex);
 		return;
 	}
 }
@@ -304,7 +319,7 @@ UObject* UAsyncDataAssetManagerSubsystem::GetObjectDataADAM(TSoftObjectPtr<UPrim
 {
 	if (PrimaryDataAsset.IsNull())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ADAM (Get Object): No reference is specified in the \"GetObjectDataADAM\" function."));
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Get Object): No reference is specified in function."));
 		return nullptr;
 	}
 
@@ -312,7 +327,7 @@ UObject* UAsyncDataAssetManagerSubsystem::GetObjectDataADAM(TSoftObjectPtr<UPrim
 
 	if (ObjectIndex == -1)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("The requested data asset \"%s\" is not in the memory of the ADAM subsystem."), *PrimaryDataAsset.GetAssetName());
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Get Object): The requested data asset \"%s\" is not in the memory of the ADAM subsystem."), *PrimaryDataAsset.GetAssetName());
 		return nullptr;
 	}
 
@@ -336,4 +351,115 @@ int32 UAsyncDataAssetManagerSubsystem::GetIndexDataADAM(TSoftObjectPtr<UPrimaryD
 	}
 
 	return -1;
+}
+
+// Function for searching nested data assets
+TArray<TSoftObjectPtr<UPrimaryDataAsset>> UAsyncDataAssetManagerSubsystem::FindNestedAssets(UPrimaryDataAsset* DataAsset)
+{
+	TArray<TSoftObjectPtr<UPrimaryDataAsset>> NestedAssets;
+
+	if (!DataAsset)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Recursive Load): Received a null value."));
+
+		return NestedAssets;
+	}
+
+	// Storage of unique asset names for duplicate control.
+	TArray<FString> UniqueAssetNames;
+
+	// Use reflection to search for nested Data Assets
+	for (TFieldIterator<FProperty> PropIterator(DataAsset->GetClass()); PropIterator; ++PropIterator)
+	{
+		const FProperty* Prop = *PropIterator;
+
+		// Look for properties of type TSoftObjectPtr<UPrimaryDataAsset>
+		if (const FSoftObjectProperty* SoftObjectProperty = CastField<FSoftObjectProperty>(Prop))
+		{
+			if (SoftObjectProperty->PropertyClass->IsChildOf(UPrimaryDataAsset::StaticClass()))
+			{
+				TSoftObjectPtr<UPrimaryDataAsset> ChildAsset = *SoftObjectProperty->ContainerPtrToValuePtr<TSoftObjectPtr<UPrimaryDataAsset>>(DataAsset);
+				FString ChildAssetName = ChildAsset.GetAssetName();
+				// Filtering and adding data
+				if (!ChildAssetName.IsEmpty() && !UniqueAssetNames.Contains(ChildAssetName))
+				{
+					UniqueAssetNames.AddUnique(ChildAssetName);
+					NestedAssets.Add(ChildAsset);
+				}
+			}
+		}
+
+		// If the array of soft references
+		if (const FArrayProperty* ArrayProp = CastField<FArrayProperty>(Prop))
+		{
+			if (const FSoftObjectProperty* InnerSoftObjectProperty = CastField<FSoftObjectProperty>(ArrayProp->Inner))
+			{
+				if (InnerSoftObjectProperty->PropertyClass->IsChildOf(UPrimaryDataAsset::StaticClass()))
+				{
+					FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(DataAsset));
+
+					for (int32 i = 0; i < ArrayHelper.Num(); ++i)
+					{
+						TSoftObjectPtr<UPrimaryDataAsset> ChildAsset = *reinterpret_cast<TSoftObjectPtr<UPrimaryDataAsset>*>(ArrayHelper.GetRawPtr(i));
+						FString ChildAssetName = ChildAsset.GetAssetName();
+						// Filtering and adding data
+						if (!ChildAssetName.IsEmpty() && !UniqueAssetNames.Contains(ChildAssetName))
+						{
+							UniqueAssetNames.AddUnique(ChildAssetName);
+							NestedAssets.Add(ChildAsset);
+						}
+					}
+				}
+			}
+		}
+	}	
+
+	return NestedAssets;
+}
+
+// Asynchronous recursive loading of Primary Data Asset
+void UAsyncDataAssetManagerSubsystem::RecursiveLoad(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag)
+{
+	if (PrimaryDataAsset.IsNull())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Recursive Load): No reference is specified in function."));
+		return;
+	}
+
+	UPrimaryDataAsset* Asset = PrimaryDataAsset.Get();
+
+	if (!Asset)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (Recursive Load): Received a null value."));
+		return;
+	}
+
+	// Checking nested files
+	TArray<TSoftObjectPtr<UPrimaryDataAsset>> ChildAssets = FindNestedAssets(Asset);
+
+	if (ChildAssets.Num() == 0)
+	{
+		if (EnableLog)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ADAM (Recursive Load): No nested files were found in file \"%s\"."), *PrimaryDataAsset.GetAssetName());
+		}
+
+		return;
+	}
+
+	for (TSoftObjectPtr<UPrimaryDataAsset>& Child : ChildAssets)
+	{
+		// Stop execution if there is a duplicate in memory
+		if (GetIndexDataADAM(Child) >= 0)
+		{
+			if (EnableLog)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("ADAM (Recursive Load): You are trying to load the same Data Asset \"%s\" twice."), *Child.GetAssetName());
+			}
+			continue;
+		}
+
+		// Calling asynchronous loading
+		AddToADAM(Child, Tag, true);
+	}
 }

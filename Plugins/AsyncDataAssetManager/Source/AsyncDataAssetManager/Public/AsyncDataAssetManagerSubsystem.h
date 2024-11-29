@@ -10,6 +10,29 @@
 
 class UPrimaryDataAsset;
 
+/**
+ * Async Data Asset Manager Subsystem (ADAM Subsystem)
+ * 
+ * *** Description ***
+ * This subsystem is designed to streamline operations and expedite the setup 
+ * of projects for the asynchronous loading and unloading of Primary Data Assets. 
+ * ADAM leverages the StreamableManager system for asynchronous loading and can 
+ * also independently store information about the loaded data in the form of links and tags.
+ * 
+ * *** Adding a progress bar ***
+ * If you want to get the percentage of loading completion, you can use the 'QueueADAM' 
+ * array. This array stores the real-time queue for asynchronous loading, which is 
+ * performed using the 'LoadADAM' and 'LoadArrayADAM' functions. When the data is 
+ * loaded, this array is cleared after the 'FOnLoadedADAM OnLoadedADAM' delegate is triggered.
+ * 
+ * *** Recursive Asynchronous Loading ***
+ * This subsystem enables recursive data loading. If you load a single DataAsset that 
+ * includes multiple nested DataAssets, all of them will be loaded and filtered to 
+ * avoid duplicates in memory. Additionally, if you change a tag, the entire data 
+ * package will share the specified tag.
+ * 
+ */
+
 #pragma region STRUCTS
 // The main structure of the ADAM subsystem.
 USTRUCT()
@@ -47,7 +70,7 @@ public:
 #pragma endregion STRUCTS
 
 /**
- * Async Data Asset Manager Subsystem (ADAM Subsystem)
+ * ADAM subsystem main class
  */
 UCLASS(Blueprintable)
 class ASYNCDATAASSETMANAGER_API UAsyncDataAssetManagerSubsystem : public UGameInstanceSubsystem
@@ -59,7 +82,7 @@ public:
 	virtual void Deinitialize() override;
 
 #pragma region DELEGATES
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnLoadedADAM, UObject*, LoadedObject, TSoftObjectPtr<UPrimaryDataAsset>, LoadedPrimaryDataAsset);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnLoadedADAM, UPrimaryDataAsset*, LoadedObject, TSoftObjectPtr<UPrimaryDataAsset>, LoadedPrimaryDataAsset, FName, LoadedTag, bool, RecursiveLoading);
 
 	// Indicates that the download is complete
 	UPROPERTY(BlueprintAssignable, Category = "ADAM Subsystem")
@@ -81,16 +104,18 @@ public:
 	/**
 	 * Async loading of a Data Asset and storing it in memory.
 	 * @param Tag Designed for data grouping.
+	 * @param RecursiveLoading Support for recursion. During loading, the function will check for nested Data Assets and attempt to load them. Warning! This option may require more performance and processing time.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
-	void LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset);
+	void LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset);
 
 	/**
 	 * Async loading of an array of Data Asset and storing each element in memory.
 	 * @param Tag Designed for data grouping.
+	 * @param RecursiveLoading Support for recursion. During loading, the function will check for nested Data Assets and attempt to load them. Warning! This option may require more performance and processing time.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
-	void LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FName Tag, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets);
+	void LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FName Tag, bool RecursiveLoading, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets);
 
 	// Loading a Data Asset without storing it in memory.
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
@@ -162,9 +187,18 @@ protected:
 	UFUNCTION()
 	void RemoveFromADAM(int32 DataAssetIndex, bool ForcedUnload);
 
+	// Single asynchronous loading with completion notification
 	UFUNCTION()
-	void AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag);
+	void AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
+
+	// Recursive loading using AddToADAM
+	UFUNCTION()
+	void RecursiveLoad(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag);
 
 	UFUNCTION()
-	void OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset);
+	void OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
+
+private:
+	UFUNCTION()
+	TArray<TSoftObjectPtr<UPrimaryDataAsset>> FindNestedAssets(UPrimaryDataAsset* DataAsset);
 };
