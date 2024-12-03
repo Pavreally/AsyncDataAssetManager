@@ -123,18 +123,18 @@ public:
 
 	/**
 	 * Unload one Data Asset from array and memory.
-	 * @param ForcedUnload If true, the function call will stop loading the Data Asset
+	 * @param ForcedUnload If false, the function call will stop loading the Data Asset
 	 * asynchronously and will make the target resource available for memory freeing,
-	 * on the next rubbish collection. If false, the function call will immediately clear memory from the target resource.
+	 * on the next rubbish collection. If true, the function call will immediately clear memory from the target resource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void UnloadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, bool ForcedUnload);
 
 	/**
 	 * Unload all Data Assets from array and memory. Unloading in descending order.
-	 * @param ForcedUnload If true, the function call will stop loading the Data Asset
+	 * @param ForcedUnload If false, the function call will stop loading the Data Asset
 	 * asynchronously and will make the target resource available for memory freeing,
-	 * on the next rubbish collection. If false, the function call will immediately clear memory from the target resource.
+	 * on the next rubbish collection. If true, the function call will immediately clear memory from the target resource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void UnloadAllADAM(bool ForcedUnload);
@@ -142,9 +142,9 @@ public:
 	/**
 	 * Unload all data assets with the specified tag from the array and memory. Unloading in descending order.
 	 * @param Tag Alternative deletion option. If this value is changed, all Data Assets with the specified tag will be removed from memory.
-	 * @param ForcedUnload If true, the function call will stop loading the Data Asset
+	 * @param ForcedUnload If false, the function call will stop loading the Data Asset
 	 * asynchronously and will make the target resource available for memory freeing,
-	 * on the next rubbish collection. If false, the function call will immediately clear memory from the target resource.
+	 * on the next rubbish collection. If true, the function call will immediately clear memory from the target resource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void UnloadAllTagsADAM(FName Tag, bool ForcedUnload);
