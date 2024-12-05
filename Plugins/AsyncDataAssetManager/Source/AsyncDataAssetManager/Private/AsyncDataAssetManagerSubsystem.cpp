@@ -16,7 +16,7 @@ void UAsyncDataAssetManagerSubsystem::Initialize(FSubsystemCollectionBase& Colle
 	EnableLog = SettingsADAM->bEnableLogADAM;
 
 	// Allows you to use Blueprint Code
-	void ReceivePostSubsystemInit();
+	ReceivePostSubsystemInit();
 }
 
 // Freeing memory during deinitialization
