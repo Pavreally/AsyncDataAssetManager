@@ -24,7 +24,11 @@ void UAsyncDataAssetManagerSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 
-	UnloadAllADAM(true);
+	if (!DataADAM.IsEmpty())
+	{
+		// Clearing saved TSharedPtr<FStreamableHandle>
+		UnloadAllADAM(true);
+	}
 
 	OnLoadedADAM.Clear();
 }

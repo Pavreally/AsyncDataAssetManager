@@ -10,7 +10,7 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 > The plugin has been pre-packaged only for Win64 and Android.
 
 # Latest Updates
-`Version 1.2.1`
+`Version 1.2.2`
 - Build version for Unreal Engine 5.5.
 - Refactoring and optimization of the code.
 - Added Support for Recursive Loading. This feature enables recursive loading, meaning if you have a Data Asset that contains other Data Assets, and so on, enabling the recursive loading option will load the entire nested collection into memory. The data will be filtered to prevent duplicate entries.
@@ -18,6 +18,7 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 <br>
 
 - The typo in the function parameter comment hint has been corrected.
+- Optimization of debug logs.
 
 ## What it's for
 - Load and unload Data Assets asynchronously using simple functions.
