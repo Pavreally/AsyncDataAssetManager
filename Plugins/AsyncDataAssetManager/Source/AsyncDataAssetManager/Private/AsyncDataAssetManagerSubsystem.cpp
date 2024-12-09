@@ -16,7 +16,7 @@ void UAsyncDataAssetManagerSubsystem::Initialize(FSubsystemCollectionBase& Colle
 	EnableLog = SettingsADAM->bEnableLogADAM;
 
 	// Allows you to use Blueprint Code
-	void ReceivePostSubsystemInit();
+	ReceivePostSubsystemInit();
 }
 
 // Freeing memory during deinitialization
@@ -24,7 +24,11 @@ void UAsyncDataAssetManagerSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 
-	UnloadAllADAM(true);
+	if (!DataADAM.IsEmpty())
+	{
+		// Clearing saved TSharedPtr<FStreamableHandle>
+		UnloadAllADAM(true);
+	}
 
 	OnLoadedADAM.Clear();
 }
