@@ -14,9 +14,6 @@ void UAsyncDataAssetManagerSubsystem::Initialize(FSubsystemCollectionBase& Colle
 	// Get the list of settings for the ADAM subsystem 
 	const UAsyncTechnologiesSettings* SettingsADAM = GetDefault<UAsyncTechnologiesSettings>();
 	EnableLog = SettingsADAM->bEnableLogADAM;
-
-	// Allows you to use Blueprint Code
-	ReceivePostSubsystemInit();
 }
 
 // Freeing memory during deinitialization
