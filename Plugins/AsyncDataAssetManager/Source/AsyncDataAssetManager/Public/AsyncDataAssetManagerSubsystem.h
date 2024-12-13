@@ -180,10 +180,6 @@ protected:
 	UPROPERTY()
 	bool EnableLog = false;
 
-	// Events executed after initialization.
-	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Post Subsystem Init", ToolTip = "Executes code after system initialization."))
-	void ReceivePostSubsystemInit();
-
 	UFUNCTION()
 	void RemoveFromADAM(int32 DataAssetIndex, bool ForcedUnload);
 
