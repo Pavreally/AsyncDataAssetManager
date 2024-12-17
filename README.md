@@ -1,7 +1,6 @@
 ![Async Data Asset Manager](./_Misc/Preview.png)
 
 # Async Data Asset Manager
-`BETA`<br><br>
 ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous loading and unloading of Data Assets. This subsystem simplifies data management and can be used in both Blueprints and C++.
 
 <br>
@@ -9,16 +8,15 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 > [!NOTE]
 > The plugin has been pre-packaged only for Win64 and Android.
 
-# Latest Updates
-`Version 1.2.2`
-- Build version for Unreal Engine 5.5.
-- Refactoring and optimization of the code.
-- Added Support for Recursive Loading. This feature enables recursive loading, meaning if you have a Data Asset that contains other Data Assets, and so on, enabling the recursive loading option will load the entire nested collection into memory. The data will be filtered to prevent duplicate entries.
-
-<br>
-
-- The typo in the function parameter comment hint has been corrected.
-- Optimization of debug logs.
+## Latest Updates
+`Version 1.3.0`
+- Build version for Unreal Engine 5.5.1
+- Refactoring code and improving its readability.
+- Expanding self-documenting code and enhancing UX.
+- Refined to meet the requirements of a real game project.
+- Added optional debug notification for the completion of recursive loading iteration.
+- Updated the `LoadArrayADAM` function! Added optional debug notification for the completion of loading all data (works only with `LoadArrayADAM` and `NotifyAfterFullLoaded`). If `NotifyAfterFullLoaded = true`, the `OnAllLoaded` event will notify you when all data in the array has been fully loaded. The ADAM system will ignore duplicate checks (to prevent accidental unloading of necessary data through another thread), so all Data Asset duplicates with this setting will be controlled by the engine's base system.
+- Added a new delegate `OnAllLoadedADAM`, which reports the loading of all Data Assets at once. `OnAllLoadedADAM` works only if the `NotifyAfterFullLoaded` option is enabled, which is available only in the `LoadArrayADAM` function.
 
 ## What it's for
 - Load and unload Data Assets asynchronously using simple functions.
@@ -27,6 +25,7 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 ## Features
 - Fast and simple management of asynchronous Data Asset loading without the need to use C++ code.
 - The ADAM subsystem supports parallel asynchronous loading of Data Assets from multiple sources, controlling random duplicate load and unload requests in real-time.
+- Additional duplicate checking ensures that there are no additional references to resources in memory and that they are retained by the standard system.
 - Supports bulk asynchronous loading of unique Data Assets.
 - This subsystem enables recursive data loading. If you load a single DataAsset that includes multiple nested Data Assets, all of them will be loaded and filtered to avoid duplicates in memory.
 - Group your uploaded DataAssets using tags so that they can be unloaded at the right moment <i>(for example, this can be useful if you are uploading DataAssets in parts and want to unload them without affecting other necessary data still stored in memory)</i>.
