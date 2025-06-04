@@ -39,6 +39,7 @@ public class AsyncDataAssetManager : ModuleRules
 				"Slate",
 				"SlateCore",
 				"DeveloperSettings",
+				"GameplayTags",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

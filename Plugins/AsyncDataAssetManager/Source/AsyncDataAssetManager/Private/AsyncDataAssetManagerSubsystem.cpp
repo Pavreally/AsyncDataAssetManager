@@ -5,6 +5,7 @@
 #include "Engine/AssetManager.h"
 #include "Engine/DataAsset.h"
 #include "AsyncTechnologiesSettings.h"
+#include "GameplayTagsManager.h"
 
 #pragma region SUBSYSTEM
 // Initialize subsystem
@@ -35,7 +36,7 @@ void UAsyncDataAssetManagerSubsystem::Deinitialize()
 #pragma endregion SUBSYSTEM
 
 #pragma region LOADING_FUNCTIONS
-void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset)
+void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FGameplayTag Tag, bool RecursiveLoading, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset)
 {
 	if (PrimaryDataAsset.IsNull())
 	{
@@ -56,13 +57,13 @@ void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset>
 	}
 
 	// Add in array ADAM and async load. In this case, a load notification occurs after each file is loaded.
-	AddToADAM(PrimaryDataAsset, Tag, RecursiveLoading);
+	AddToADAM(PrimaryDataAsset, Tag.GetTagName(), RecursiveLoading);
 
 	// Return the value of a soft link
 	ReturnPrimaryDataAsset = PrimaryDataAsset;
 }
 
-void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FName Tag, bool NotifyAfterFullLoaded, bool RecursiveLoading, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets)
+void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FGameplayTag Tag, bool NotifyAfterFullLoaded, bool RecursiveLoading, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets)
 {
 	if (PrimaryDataAssets.IsEmpty())
 	{
@@ -71,10 +72,12 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 		return;
 	}
 
+	FName ExtendedTag = Tag.GetTagName();
+
 	// Initiate counter for NotifyAfterFullLoaded
-	if (NotifyAfterFullLoaded && !QueueCounterADAM.Contains(Tag))
+	if (NotifyAfterFullLoaded && !QueueCounterADAM.Contains(ExtendedTag))
 	{
-		QueueCounterADAM.Add(Tag, 0);
+		QueueCounterADAM.Add(ExtendedTag, 0);
 	}
 
 	// Invoking asynchronous loading of each data asset.
@@ -94,11 +97,11 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 		// Add in array ADAM and async load
 		if (!NotifyAfterFullLoaded)
 		{
-			AddToADAM(DataAsset, Tag, RecursiveLoading);
+			AddToADAM(DataAsset, ExtendedTag, RecursiveLoading);
 		}
 		else
 		{
-			AddAllToADAM(DataAsset, Tag, RecursiveLoading);
+			AddAllToADAM(DataAsset, ExtendedTag, RecursiveLoading);
 		}
 	}
 
@@ -122,7 +125,7 @@ void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset
 	this,
 	&UAsyncDataAssetManagerSubsystem::OnLoaded,
 	PrimaryDataAsset,
-	Tag,
+	FGameplayTag::RequestGameplayTag(Tag, false),
 	RecursiveLoading);
 
 	// Determine whether the descriptor will be declared and stored
@@ -140,7 +143,7 @@ void UAsyncDataAssetManagerSubsystem::AddAllToADAM(TSoftObjectPtr<UPrimaryDataAs
 	this,
 	&UAsyncDataAssetManagerSubsystem::OnAllLoaded,
 	PrimaryDataAsset,
-	Tag,
+	FGameplayTag::RequestGameplayTag(Tag, false),
 	RecursiveLoading);
 
 	// Determine whether the descriptor will be declared and stored
@@ -191,7 +194,7 @@ void UAsyncDataAssetManagerSubsystem::FastLoadADAM(TSoftObjectPtr<UPrimaryDataAs
 			this,
 			&UAsyncDataAssetManagerSubsystem::OnLoaded,
 			PrimaryDataAsset,
-			Tag,
+			FGameplayTag::RequestGameplayTag(Tag, false),
 			false);
 
 	// Determine whether the descriptor will be declared and stored
@@ -204,7 +207,7 @@ void UAsyncDataAssetManagerSubsystem::FastLoadADAM(TSoftObjectPtr<UPrimaryDataAs
 #pragma endregion LOADING_FUNCTIONS
 
 #pragma region CALL_DELEGATE
-void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading)
+void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FGameplayTag Tag, bool RecursiveLoading)
 {
 	UPrimaryDataAsset* LoadedObject =	PrimaryDataAsset.Get();
 
@@ -220,7 +223,7 @@ void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset>
 
 	if (RecursiveLoading && FindNestedAssets(LoadedObject).Num() != 0)
 	{
-		RecursiveLoad(PrimaryDataAsset, Tag, false);
+		RecursiveLoad(PrimaryDataAsset, Tag.GetTagName(), false);
 	}
 
 	if (EnableLog)
@@ -232,7 +235,7 @@ void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset>
 	QueueADAM.Remove(PrimaryDataAsset.GetAssetName());
 }
 
-void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading)
+void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FGameplayTag Tag, bool RecursiveLoading)
 {
 	UPrimaryDataAsset* LoadedObject =	PrimaryDataAsset.Get();
 
@@ -243,9 +246,11 @@ void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAss
 		return;
 	}
 
+	FName ExtendedTag = Tag.GetTagName();
+
 	if (RecursiveLoading && FindNestedAssets(LoadedObject).Num() != 0)
 	{
-		RecursiveLoad(PrimaryDataAsset, Tag, true);
+		RecursiveLoad(PrimaryDataAsset, ExtendedTag, true);
 	}
 
 	if (EnableLog)
@@ -253,12 +258,12 @@ void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAss
 		UE_LOG(LogTemp, Display, TEXT("ADAM (On All Loaded): Data Asset \"%s\" is loaded."), *PrimaryDataAsset.GetAssetName());
 	}
 
-	if (QueueCounterADAM.Contains(Tag))
+	if (QueueCounterADAM.Contains(ExtendedTag))
 	{
-		QueueCounterADAM[Tag]--;
+		QueueCounterADAM[ExtendedTag]--;
 
 		// Inform the FOnAllLoadedADAM subsystem delegate that the loading is complete
-		if (QueueCounterADAM[Tag] == 0)
+		if (QueueCounterADAM[ExtendedTag] == 0)
 		{
 			OnAllLoadedADAM.Broadcast(Tag);
 
@@ -267,7 +272,7 @@ void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAss
 				UE_LOG(LogTemp, Display, TEXT("ADAM (On All Loaded): All Data Assets has been loaded."), *PrimaryDataAsset.GetAssetName());
 			}
 
-			QueueCounterADAM.Remove(Tag);
+			QueueCounterADAM.Remove(ExtendedTag);
 
 			return;
 		}
@@ -328,14 +333,16 @@ void UAsyncDataAssetManagerSubsystem::UnloadAllADAM(bool ForcedUnload)
 	}
 }
 
-void UAsyncDataAssetManagerSubsystem::UnloadAllTagsADAM(FName Tag, bool ForcedUnload)
+void UAsyncDataAssetManagerSubsystem::UnloadAllTagsADAM(FGameplayTag Tag, bool ForcedUnload)
 {
+	FName ExtendedTag = Tag.GetTagName();
+
 	// Remove of all data with a similar target tag
-	if (Tag != "None")
+	if (ExtendedTag != "None")
 	{
 		for (int32 i = DataADAM.Num() - 1; i >= 0; i--)
 		{
-			if (DataADAM[i].Tag == Tag)
+			if (DataADAM[i].Tag == ExtendedTag)
 			{
 				if (EnableLog)
 				{
@@ -515,7 +522,7 @@ TArray<TSoftObjectPtr<UPrimaryDataAsset>> UAsyncDataAssetManagerSubsystem::FindN
 
 	if (EnableLog && NestedAssets.Num() == 0)
 	{
-		UE_LOG(LogTemp, Display, TEXT("ADAM (Recursive data): Length [%d]. All nested data is loaded!"), NestedAssets.Num());
+		UE_LOG(LogTemp, Display, TEXT("ADAM (Recursive data): Iteration is complete. All nested data is loaded!"));
 	}
 
 	return NestedAssets;

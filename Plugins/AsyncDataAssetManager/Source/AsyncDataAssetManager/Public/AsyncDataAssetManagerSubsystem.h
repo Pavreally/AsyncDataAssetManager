@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Engine/StreamableManager.h"
+#include "GameplayTagContainer.h"
 
 #include "AsyncDataAssetManagerSubsystem.generated.h"
 
@@ -70,7 +71,7 @@ public:
 /**
  * ADAM subsystem main class
  */
-UCLASS(Blueprintable)
+UCLASS(BlueprintType, DisplayName = "ADAM Subsystem")
 class ASYNCDATAASSETMANAGER_API UAsyncDataAssetManagerSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -83,13 +84,13 @@ public:
 	//~End USubsystem
 
 #pragma region DELEGATES
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnLoadedADAM, UPrimaryDataAsset*, LoadedObject, TSoftObjectPtr<UPrimaryDataAsset>, LoadedPrimaryDataAsset, FName, LoadedTag, bool, RecursiveLoading);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnLoadedADAM, UPrimaryDataAsset*, LoadedObject, TSoftObjectPtr<UPrimaryDataAsset>, LoadedPrimaryDataAsset, FGameplayTag, LoadedTag, bool, RecursiveLoading);
 
 	// Indicates that the load is complete
 	UPROPERTY(BlueprintAssignable, Category = "ADAM Subsystem")
 	FOnLoadedADAM OnLoadedADAM;
 
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAllLoadedADAM, FName, LoadedTag);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAllLoadedADAM, FGameplayTag, LoadedTag);
 
 	// Indicates that the load is complete
 	UPROPERTY(BlueprintAssignable, Category = "ADAM Subsystem")
@@ -118,7 +119,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void LoadADAM(
 			TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset,
-			FName Tag, 
+			FGameplayTag Tag, 
 			bool RecursiveLoading, 
 			TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset);
 
@@ -133,7 +134,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void LoadArrayADAM(
 			TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, 
-			FName Tag, 
+			FGameplayTag Tag, 
 			bool NotifyAfterFullLoaded,
 			bool RecursiveLoading, 
 			TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets);
@@ -174,7 +175,7 @@ public:
 	 * on the next rubbish collection. If true, the function call will immediately clear memory from the target resource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
-	void UnloadAllTagsADAM(FName Tag, bool ForcedUnload);
+	void UnloadAllTagsADAM(FGameplayTag Tag, bool ForcedUnload);
 
 	/**
 	 * Returns the ADAM mirror array formed it the main array with a reference to the destructor.
@@ -268,7 +269,7 @@ protected:
 	* RecursiveLoading - whether the recursive option was selected during loading.
 	*/
 	UFUNCTION()
-	void OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
+	void OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FGameplayTag Tag, bool RecursiveLoading);
 
 	/**
 	 * Delegate notification after full loading Data Asset into ADAM subsystem
@@ -283,7 +284,7 @@ protected:
 	 * RecursiveLoading - whether the recursive option was selected during loading.
 	 */
 	UFUNCTION()
-	void OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
+	void OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FGameplayTag Tag, bool RecursiveLoading);
 
 private:
 
