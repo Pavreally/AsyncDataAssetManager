@@ -9,11 +9,14 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 > The plugin has been pre-packaged only for Win64 and Android.
 
 ## Latest Updates
-`Version 1.4.0`
+`Version 1.4.1`
 - Build version for Unreal Engine 5.6.0
-- To improve usability and streamline the workflow, tag specification has been changed from `FName` to `FGameplayTag`. (Note: `FName` is still used in core algorithms to ensure maximum performance when processing large datasets.) If a specific tag is not defined, it will default to `NONE`.
-- Blueprint improvement: a concise name for the subsystem has been added for convenience.
-- Minor adjustments to optional debug notifications.
+- Code refactoring and decomposition.
+- Improving code security.
+- Cleaning up the chaos in the DemoFiles folder after the latest patch and putting things in order.
+- Redesign of the data asset loading tag system. Tags in the ADAM subsystem functions are now universal — this means that for each data asset package, you can choose which approach to use: a regular `FName` for complex tags (e.g., level names) or fixed tags like `FGameplayTag` for centralized management (so you don’t have to keep everything written down). Both approaches can be used at the same time, since the main storage supports both tag types as `FName`. However, only one tag type can be used per data asset package.
+- Redesign of the data asset unloading tag system in the `UnloadAllTagsADAM` function. For convenience, the tag selection has been expanded to three. You can fill in and specify all the tag types you need to unload at once.
+- Correction for the `UnloadAllTagsADAM` function — now it is also possible to bulk unload from memory only data assets with the tag "None".
 
 ## What it's for
 - Load and unload Data Assets asynchronously using simple functions.
@@ -37,7 +40,7 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 4. Done! The 'Async Data Asset Manager' folders should appear in the Unreal Engine browser and the plugin should be automatically activated. If the plugin folder is not visible, activate visibility through the browser settings: `Settings > Show Plugin Content`.
 
 ## How to use it?
-An interactive step-by-step tutorial on how to use ADAM can be found in the file: `BP_GameMode_ADAM_demo`, which is located at the path `Plugins\Async Data Asset Manager Content\DemoFiles\`.
+An interactive step-by-step tutorial on how to use ADAM can be found in the file: `B_GameMode_DemoADAM`, which is located at the path `Plugins\Async Data Asset Manager Content\DemoFiles\`.
 
 ![Window Manager](./_Misc/Tutorial/Tutorial_1.jpg)
 ![Window Manager](./_Misc/Tutorial/Tutorial_2.jpg)

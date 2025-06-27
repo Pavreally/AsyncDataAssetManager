@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Engine/StreamableManager.h"
+#include "GameplayTagsManager.h"
 #include "GameplayTagContainer.h"
 
 #include "AsyncDataAssetManagerSubsystem.generated.h"
@@ -33,6 +34,37 @@ class UPrimaryDataAsset;
  */
 
 #pragma region STRUCTS
+// A structure for adding tags to data assets.
+USTRUCT(BlueprintType)
+struct FTagADAM
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ADAM Subsystem", meta = (ToolTip = "Specify a tag by selecting only one data type. The system processes the very first filled tag, starting the check from top to bottom."))
+	FGameplayTag GameplayTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ADAM Subsystem", meta = (ToolTip = "Specify a tag by selecting only one data type. The system processes the very first filled tag, starting the check from top to bottom."))
+	FName TagName;
+};
+
+// A structure for adding mass tags to data assets.
+USTRUCT(BlueprintType)
+struct FTagContainerADAM
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ADAM Subsystem", meta = (ToolTip = "Can be used simultaneously with other tags. The system processes the very first filled tag, starting the check from top to bottom."))
+	FGameplayTagContainer GameplayTags;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ADAM Subsystem", meta = (ToolTip = "Can be used simultaneously with other tags. The system processes the very first filled tag, starting the check from top to bottom."))
+	TArray<FName> TagNameContainer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ADAM Subsystem", meta = (ToolTip = "Can be used simultaneously with other tags. The system processes the very first filled tag, starting the check from top to bottom."))
+	FName TagName;
+};
+
 // The main structure of the ADAM subsystem.
 USTRUCT()
 struct FMemoryADAM
@@ -77,20 +109,19 @@ class ASYNCDATAASSETMANAGER_API UAsyncDataAssetManagerSubsystem : public UGameIn
 	GENERATED_BODY()
 	
 public:
-
 	//~USubsystem
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	//~End USubsystem
 
 #pragma region DELEGATES
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnLoadedADAM, UPrimaryDataAsset*, LoadedObject, TSoftObjectPtr<UPrimaryDataAsset>, LoadedPrimaryDataAsset, FGameplayTag, LoadedTag, bool, RecursiveLoading);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnLoadedADAM, UPrimaryDataAsset*, LoadedObject, TSoftObjectPtr<UPrimaryDataAsset>, LoadedPrimaryDataAsset, FName, LoadedTag, bool, RecursiveLoading);
 
 	// Indicates that the load is complete
 	UPROPERTY(BlueprintAssignable, Category = "ADAM Subsystem")
 	FOnLoadedADAM OnLoadedADAM;
 
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAllLoadedADAM, FGameplayTag, LoadedTag);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAllLoadedADAM, FName, LoadedTag);
 
 	// Indicates that the load is complete
 	UPROPERTY(BlueprintAssignable, Category = "ADAM Subsystem")
@@ -119,7 +150,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void LoadADAM(
 			TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset,
-			FGameplayTag Tag, 
+			FTagADAM Tag, 
 			bool RecursiveLoading, 
 			TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset);
 
@@ -134,7 +165,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void LoadArrayADAM(
 			TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, 
-			FGameplayTag Tag, 
+			FTagADAM Tag, 
 			bool NotifyAfterFullLoaded,
 			bool RecursiveLoading, 
 			TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets);
@@ -175,7 +206,7 @@ public:
 	 * on the next rubbish collection. If true, the function call will immediately clear memory from the target resource.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
-	void UnloadAllTagsADAM(FGameplayTag Tag, bool ForcedUnload);
+	void UnloadAllTagsADAM(FTagContainerADAM Tags, bool ForcedUnload);
 
 	/**
 	 * Returns the ADAM mirror array formed it the main array with a reference to the destructor.
@@ -211,14 +242,31 @@ public:
 #pragma endregion BLUEPRINT_FUNCTIONS
 
 protected:
+	// Determines the type of string and returns it in FName. If all variables contain an empty string, returns NAME_None.
+	UFUNCTION()
+	FName GetTagNameFromStruct(FTagADAM& Tag);
+
+private:
+	UPROPERTY()
+	bool EnableLog = false;
+
+	UPROPERTY()
+	TMap<FName, int32> QueueCounterADAM;
+
+	// Function for searching nested data assets
+	UFUNCTION()
+	TArray<TSoftObjectPtr<UPrimaryDataAsset>> FindNestedAssets(UPrimaryDataAsset* DataAsset);
 
 	/**
-	 * Remove Data Asset from the ADAM array and asynchronously unload it.
-	 * 
-	 * @param ForcedUnload If false, the function call will stop loading the Data Asset
+	 * Add data to the main DataADAM array
+	 * @param PrimaryDataAsset Soft link to data asset.
+	 * @param DataAssetHandle Data Asset Descriptor.
+	 * @param Tag Designed for data grouping.
 	 */
-	UFUNCTION()
-	void RemoveFromADAM(int32 DataAssetIndex, bool ForcedUnload);
+	void AddDataToArrayADAM(
+			TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset,
+			TSharedPtr<FStreamableHandle> DataAssetHandle,
+			FName Tag);
 
 	/**
 	 * Single asynchronous loading with completion notification
@@ -247,16 +295,6 @@ protected:
 	void AddAllToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
 
 	/**
-	 * Asynchronous recursive loading of Data Asset
-	 * 
-	 * @param PrimaryDataAsset Soft link to data asset.
-	 * @param Tag Designed for data grouping.
-	 * @param NotifyAfterFullLoaded If true, the "OnAllLoaded" event will notify you when all data in the array has been fully loaded. The ADAM system will ignore duplicate checks (to prevent accidental unloading of necessary data through another thread), so all Data Asset duplicates will be controlled by the engine's base system.
-	 */
-	UFUNCTION()
-	void RecursiveLoad(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool NotifyAfterFullLoaded);
-
-	/**
 	* Delegate notification after loading Data Asset into ADAM subsystem
 	* 
 	* @param PrimaryDataAsset Soft link to data asset.
@@ -269,7 +307,7 @@ protected:
 	* RecursiveLoading - whether the recursive option was selected during loading.
 	*/
 	UFUNCTION()
-	void OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FGameplayTag Tag, bool RecursiveLoading);
+	void OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
 
 	/**
 	 * Delegate notification after full loading Data Asset into ADAM subsystem
@@ -284,28 +322,23 @@ protected:
 	 * RecursiveLoading - whether the recursive option was selected during loading.
 	 */
 	UFUNCTION()
-	void OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FGameplayTag Tag, bool RecursiveLoading);
-
-private:
-
-	UPROPERTY()
-	bool EnableLog = false;
-
-	UPROPERTY()
-	TMap<FName, int32> QueueCounterADAM;
-
-	// Function for searching nested data assets
-	UFUNCTION()
-	TArray<TSoftObjectPtr<UPrimaryDataAsset>> FindNestedAssets(UPrimaryDataAsset* DataAsset);
+	void OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
 
 	/**
-	 * Add data to the main DataADAM array
-	 * @param PrimaryDataAsset Soft link to data asset.
-	 * @param DataAssetHandle Data Asset Descriptor.
-	 * @param Tag Designed for data grouping.
+	 * Remove Data Asset from the ADAM array and asynchronously unload it.
+	 * 
+	 * @param ForcedUnload If false, the function call will stop loading the Data Asset
 	 */
-	void AddDataToArrayADAM(
-			TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset,
-			TSharedPtr<FStreamableHandle> DataAssetHandle,
-			FName Tag);
+	UFUNCTION()
+	void RemoveFromADAM(int32 DataAssetIndex, bool ForcedUnload);
+
+	/**
+	 * Asynchronous recursive loading of Data Asset
+	 * 
+	 * @param PrimaryDataAsset Soft link to data asset.
+	 * @param Tag Designed for data grouping.
+	 * @param NotifyAfterFullLoaded If true, the "OnAllLoaded" event will notify you when all data in the array has been fully loaded. The ADAM system will ignore duplicate checks (to prevent accidental unloading of necessary data through another thread), so all Data Asset duplicates will be controlled by the engine's base system.
+	 */
+	UFUNCTION()
+	void RecursiveLoad(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool NotifyAfterFullLoaded);
 };
