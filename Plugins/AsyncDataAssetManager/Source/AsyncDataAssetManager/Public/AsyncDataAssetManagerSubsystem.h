@@ -253,9 +253,19 @@ private:
 	UPROPERTY()
 	TMap<FName, int32> QueueCounterADAM;
 
-	// Function for searching nested data assets
+	// Searching nested data assets
 	UFUNCTION()
 	TArray<TSoftObjectPtr<UPrimaryDataAsset>> FindNestedAssets(UPrimaryDataAsset* DataAsset);
+
+	/**
+	 * Recursive function for searching nested data assets.
+	 * 
+	 * @param Container Pointer to the memory of the struct or object instance being inspected.
+	 * @param Struct Reflection metadata describing the type of the container (UStruct or UClass).
+	 * @param OutNestedAssets Array to collect discovered nested PrimaryDataAssets.
+	 * @param UniqueAssetNames Set of asset names used to prevent duplicates when collecting assets.
+	 */
+	void FindNestedAssetsRecursive(void* Container, UStruct* Struct, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& OutNestedAssets, TSet<FString>& UniqueAssetNames);
 
 	/**
 	 * Add data to the main DataADAM array

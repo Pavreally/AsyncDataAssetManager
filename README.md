@@ -9,14 +9,10 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 > The plugin has been pre-packaged only for Win64 and Android.
 
 ## Latest Updates
-`Version 1.4.1`
-- Build version for Unreal Engine 5.6.0
-- Code refactoring and decomposition.
-- Improving code security.
-- Cleaning up the chaos in the DemoFiles folder after the latest patch and putting things in order.
-- Redesign of the data asset loading tag system. Tags in the ADAM subsystem functions are now universal — this means that for each data asset package, you can choose which approach to use: a regular `FName` for complex tags (e.g., level names) or fixed tags like `FGameplayTag` for centralized management (so you don’t have to keep everything written down). Both approaches can be used at the same time, since the main storage supports both tag types as `FName`. However, only one tag type can be used per data asset package.
-- Redesign of the data asset unloading tag system in the `UnloadAllTagsADAM` function. For convenience, the tag selection has been expanded to three. You can fill in and specify all the tag types you need to unload at once.
-- Correction for the `UnloadAllTagsADAM` function — now it is also possible to bulk unload from memory only data assets with the tag "None".
+`Version 1.4.2`
+- Build version for Unreal Engine 5.6.0+
+- Refactored the method for searching nested data assets.
+- Structures and arrays of structures are now checked during recursive data asset loading.
 
 ## What it's for
 - Load and unload Data Assets asynchronously using simple functions.
@@ -28,7 +24,7 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 - Additional duplicate checking ensures that there are no additional references to resources in memory and that they are retained by the standard system.
 - Supports bulk asynchronous loading of unique Data Assets.
 - This subsystem enables recursive data loading. If you load a single DataAsset that includes multiple nested Data Assets, all of them will be loaded and filtered to avoid duplicates in memory.
-- Group your uploaded DataAssets using tags so that they can be unloaded at the right moment <i>(for example, this can be useful if you are uploading DataAssets in parts and want to unload them without affecting other necessary data still stored in memory)</i>.
+- Group your uploaded DataAssets using tags so that they can be unloaded at the right moment <i>(for example, this can be useful if you are uploading DataAssets in parts and want to unload them without affecting other necessary data still stored in memory)</i>. You can also choose which approach to use: a regular `FName` for complex tags (e.g., level names) or fixed tags like `FGameplayTag` for centralized management (so you don’t have to keep everything written down).
 - Supports asynchronous loading without memory retention <i>(e.g., if you need to immediately access data and then free up memory)</i>.
 - Single notification for bulk data load. The `OnAllLoadedADAM` delegate notifies when all Data Assets have been loaded simultaneously. It only functions if the `NotifyAfterFullLoaded` option is enabled, which is supported exclusively by the `LoadArrayADAM` method.
 - Disableable debug logs allow you to monitor the entire asynchronous data management process. Plugin settings are located in `Project Settings > Plugins > Async Technologies - ADAM`.
