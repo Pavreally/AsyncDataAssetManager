@@ -179,3 +179,28 @@ void UAsyncDataAssetManagerSubsystem::FindNestedAssetsRecursive(void* Container,
 		}
 	}
 }
+
+TArray<TSoftObjectPtr<UPrimaryDataAsset>> UAsyncDataAssetManagerSubsystem::GetDataByClassADAM(TSubclassOf<UPrimaryDataAsset> DataAssetClass, FName Tag, bool bIgnoreTag)
+{
+	TArray<TSoftObjectPtr<UPrimaryDataAsset>> SortedPrimaryDataAsset;
+
+	if (!DataAssetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ADAM (GetDataByClass): DataAssetClass is nullptr!"));
+
+		return SortedPrimaryDataAsset;
+	}
+
+	for (const FMemoryADAM& Data : DataADAM)
+	{
+		if (Data.MemoryReference.IsValid() && Data.SoftReference->GetClass()->IsChildOf(DataAssetClass))
+		{
+			if (bIgnoreTag || Data.Tag == Tag)
+			{
+				SortedPrimaryDataAsset.Add(Data.SoftReference);
+			}
+		}
+	}
+
+	return SortedPrimaryDataAsset;
+}

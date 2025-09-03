@@ -6,7 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "AsyncTechnologiesSettings.h"
 
-void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FTagADAM Tag, bool RecursiveLoading, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset)
+void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FTagADAM Tag, int32 RecursiveDepthLoading, TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset)
 {
 	if (PrimaryDataAsset.IsNull())
 	{
@@ -26,14 +26,19 @@ void UAsyncDataAssetManagerSubsystem::LoadADAM(TSoftObjectPtr<UPrimaryDataAsset>
 		return;
 	}
 
+	if (RecursiveDepthLoading < -1)
+	{
+		RecursiveDepthLoading = FMath::Max(RecursiveDepthLoading, -1);
+	}
+
 	// Add in array ADAM and async load. In this case, a load notification occurs after each file is loaded.
-	AddToADAM(PrimaryDataAsset, GetTagNameFromStruct(Tag), RecursiveLoading);
+	AddToADAM(PrimaryDataAsset, GetTagNameFromStruct(Tag), RecursiveDepthLoading);
 
 	// Return the value of a soft link
 	ReturnPrimaryDataAsset = PrimaryDataAsset;
 }
 
-void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FTagADAM Tag, bool NotifyAfterFullLoaded, bool RecursiveLoading, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets)
+void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, FTagADAM Tag, bool NotifyAfterFullLoaded, int32 RecursiveDepthLoading, TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets)
 {
 	if (PrimaryDataAssets.IsEmpty())
 	{
@@ -49,6 +54,11 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 	if (NotifyAfterFullLoaded && !QueueCounterADAM.Contains(TagName))
 	{
 		QueueCounterADAM.Add(TagName, 0);
+	}
+
+	if (RecursiveDepthLoading < -1)
+	{
+		RecursiveDepthLoading = FMath::Max(RecursiveDepthLoading, -1);
 	}
 
 	// Invoking asynchronous loading of each data asset.
@@ -68,11 +78,11 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 		// Add in array ADAM and async load
 		if (!NotifyAfterFullLoaded)
 		{
-			AddToADAM(DataAsset, TagName, RecursiveLoading);
+			AddToADAM(DataAsset, TagName, RecursiveDepthLoading);
 		}
 		else
 		{
-			AddAllToADAM(DataAsset, TagName, RecursiveLoading);
+			AddAllToADAM(DataAsset, TagName, RecursiveDepthLoading);
 		}
 	}
 
@@ -80,7 +90,7 @@ void UAsyncDataAssetManagerSubsystem::LoadArrayADAM(TArray<TSoftObjectPtr<UPrima
 	ReturnPrimaryDataAssets = PrimaryDataAssets;
 }
 
-void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading)
+void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, int32 RecursiveDepthLoading)
 {
 	// Add Queue
 	FString DataAssetName = PrimaryDataAsset.GetAssetName();
@@ -97,7 +107,7 @@ void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset
 	&UAsyncDataAssetManagerSubsystem::OnLoaded,
 	PrimaryDataAsset,
 	Tag,
-	RecursiveLoading);
+	RecursiveDepthLoading);
 
 	// Determine whether the descriptor will be declared and stored
 	TSharedPtr<FStreamableHandle> DataAssetHandle = StreamableManager.RequestAsyncLoad(PrimaryDataAsset.ToSoftObjectPath(),	Delegate);
@@ -109,7 +119,7 @@ void UAsyncDataAssetManagerSubsystem::AddToADAM(TSoftObjectPtr<UPrimaryDataAsset
 	}
 }
 
-void UAsyncDataAssetManagerSubsystem::AddAllToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading)
+void UAsyncDataAssetManagerSubsystem::AddAllToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, int32 RecursiveDepthLoading)
 {
 	FStreamableManager& StreamableManager = UAssetManager::GetStreamableManager();
 	// Create a delegate
@@ -118,7 +128,7 @@ void UAsyncDataAssetManagerSubsystem::AddAllToADAM(TSoftObjectPtr<UPrimaryDataAs
 	&UAsyncDataAssetManagerSubsystem::OnAllLoaded,
 	PrimaryDataAsset,
 	Tag,
-	RecursiveLoading);
+	RecursiveDepthLoading);
 
 	// Determine whether the descriptor will be declared and stored
 	TSharedPtr<FStreamableHandle> DataAssetHandle = StreamableManager.RequestAsyncLoad(PrimaryDataAsset.ToSoftObjectPath(),	Delegate);
@@ -172,7 +182,7 @@ void UAsyncDataAssetManagerSubsystem::FastLoadADAM(TSoftObjectPtr<UPrimaryDataAs
 			&UAsyncDataAssetManagerSubsystem::OnLoaded,
 			PrimaryDataAsset,
 			Tag,
-			false);
+			0);
 
 	// This handle is not stored in memory
 	TSharedPtr<FStreamableHandle> DataAssetHandle = StreamableManager.RequestAsyncLoad(PrimaryDataAsset.ToSoftObjectPath(),	Delegate);

@@ -115,7 +115,7 @@ public:
 	//~End USubsystem
 
 #pragma region DELEGATES
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnLoadedADAM, UPrimaryDataAsset*, LoadedObject, TSoftObjectPtr<UPrimaryDataAsset>, LoadedPrimaryDataAsset, FName, LoadedTag, bool, RecursiveLoading);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnLoadedADAM, UPrimaryDataAsset*, LoadedObject, TSoftObjectPtr<UPrimaryDataAsset>, LoadedPrimaryDataAsset, FName, LoadedTag, int32, RecursiveDepthLoading);
 
 	// Indicates that the load is complete
 	UPROPERTY(BlueprintAssignable, Category = "ADAM Subsystem")
@@ -144,14 +144,14 @@ public:
 	 * Async loading of a Data Asset and storing it in memory.
 	 * @param PrimaryDataAsset Soft link to data asset.
 	 * @param Tag Designed for data grouping.
-	 * @param RecursiveLoading Support for recursion. During loading, the function will check for nested Data Assets and attempt to load them. Warning! This option may require more performance and processing time.
+	 * @param RecursiveDepthLoading Recursion support and depth. If the value is set to '0', recursion will be disabled. If set to '-1', recursion will be infinite.
 	 * @return ReturnPrimaryDataAsset - Returns the same data asset as that specified in the first parameter.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void LoadADAM(
 			TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset,
-			FTagADAM Tag, 
-			bool RecursiveLoading, 
+			FTagADAM Tag,
+			int32 RecursiveDepthLoading,
 			TSoftObjectPtr<UPrimaryDataAsset>& ReturnPrimaryDataAsset);
 
 	/**
@@ -159,15 +159,15 @@ public:
 	 * @param PrimaryDataAssets Soft link to data assets.
 	 * @param Tag Designed for data grouping.
 	 * @param NotifyAfterFullLoaded If true, the "OnAllLoaded" event will notify you when all data in the array has been fully loaded. The ADAM system will ignore duplicate checks (to prevent accidental unloading of necessary data through another thread), so all Data Asset duplicates will be controlled by the engine's base system.
-	 * @param RecursiveLoading Support for recursion. During loading, the function will check for nested Data Assets and attempt to load them. Warning! This option may require more performance and processing time.
+	 * @param RecursiveDepthLoading Recursion support and depth. If the value is set to '0', recursion will be disabled. If set to '-1', recursion will be infinite.
 	 * @result ReturnPrimaryDataAssets - Returns the same data asset as that specified in the first parameter.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	void LoadArrayADAM(
 			TArray<TSoftObjectPtr<UPrimaryDataAsset>> PrimaryDataAssets, 
-			FTagADAM Tag, 
+			FTagADAM Tag,
 			bool NotifyAfterFullLoaded,
-			bool RecursiveLoading, 
+			int32 RecursiveDepthLoading,
 			TArray<TSoftObjectPtr<UPrimaryDataAsset>>& ReturnPrimaryDataAssets);
 
 	/**
@@ -238,7 +238,18 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
 	int32 GetIndexDataADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset);
-	
+
+	/**
+	 * Selects a data array from the shared storage based on the specified class and tag.
+	 * 
+	 * @param DataAssetClass The data asset class to filter by.
+	 * @param Tag The tag to filter the data assets.
+	 * @param bIgnoreTag If true, the tag will not be checked.
+	 * @return Returns an array of data assets that match the specified class and tag.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ADAM Subsystem")
+	TArray<TSoftObjectPtr<UPrimaryDataAsset>> GetDataByClassADAM(TSubclassOf<UPrimaryDataAsset> DataAssetClass, FName Tag, bool bIgnoreTag = true);
+
 #pragma endregion BLUEPRINT_FUNCTIONS
 
 protected:
@@ -283,10 +294,10 @@ private:
 	 * 
 	 * @param PrimaryDataAsset Soft link to data asset.
 	 * @param Tag Designed for data grouping.
-	 * @param RecursiveLoading Support for recursion. During loading, the function will check for nested Data Assets and attempt to load them. Warning! This option may require more performance and processing time.
+	 * @param RecursiveDepthLoading Recursion support and depth. If the value is set to '0', recursion will be disabled. If set to '-1', recursion will be infinite.
 	 */
 	UFUNCTION()
-	void AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
+	void AddToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, int32 RecursiveDepthLoading);
 
 	/**
 	 * Multiple asynchronous loading with completion notification
@@ -299,40 +310,38 @@ private:
 	 * 
 	 * @param PrimaryDataAsset Soft link to data asset.
 	 * @param Tag Designed for data grouping.
-	 * @param RecursiveLoading Support for recursion. During loading, the function will check for nested Data Assets and attempt to load them. Warning! This option may require more performance and processing time.
+	 * @param RecursiveDepthLoading Recursion support and depth. If the value is set to '0', recursion will be disabled. If set to '-1', recursion will be infinite.
 	 */
 	UFUNCTION()
-	void AddAllToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
+	void AddAllToADAM(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, int32 RecursiveDepthLoading);
 
 	/**
 	* Delegate notification after loading Data Asset into ADAM subsystem
 	* 
 	* @param PrimaryDataAsset Soft link to data asset.
 	* @param Tag Designed for data grouping.
-	* @param RecursiveLoading Support for recursion. During loading, the function will check for nested Data Assets and attempt to load them. Warning! This option may require more performance and processing time.
+	* @param RecursiveDepthLoading Recursion support and depth. If the value is set to '0', recursion will be disabled. If set to '-1', recursion will be infinite.
 	* 
-	* LoadedObject - the loaded data asset object.
 	* PrimaryDataAsset - a soft link with a generic suffix.
 	* Tag - a given tag for grouping data.
-	* RecursiveLoading - whether the recursive option was selected during loading.
+	* RecursiveDepthLoading - whether the recursive option was selected during loading.
 	*/
 	UFUNCTION()
-	void OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
+	void OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, int32 RecursiveDepthLoading);
 
 	/**
 	 * Delegate notification after full loading Data Asset into ADAM subsystem
 	 * 
 	 * @param PrimaryDataAsset Soft link to data asset.
 	 * @param Tag Designed for data grouping.
-	 * @param RecursiveLoading Support for recursion. During loading, the function will check for nested Data Assets and attempt to load them. Warning! This option may require more performance and processing time.
+	 * @param RecursiveDepthLoading Recursion support and depth. If the value is set to '0', recursion will be disabled. If set to '-1', recursion will be infinite.
 	 * 
-	 * LoadedObject - the loaded data asset object.
 	 * PrimaryDataAsset - a soft link with a generic suffix.
 	 * Tag - a given tag for grouping data.
-	 * RecursiveLoading - whether the recursive option was selected during loading.
+	 * RecursiveDepthLoading - whether the recursive option was selected during loading.
 	 */
 	UFUNCTION()
-	void OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading);
+	void OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, int32 RecursiveDepthLoading);
 
 	/**
 	 * Remove Data Asset from the ADAM array and asynchronously unload it.
@@ -350,5 +359,5 @@ private:
 	 * @param NotifyAfterFullLoaded If true, the "OnAllLoaded" event will notify you when all data in the array has been fully loaded. The ADAM system will ignore duplicate checks (to prevent accidental unloading of necessary data through another thread), so all Data Asset duplicates will be controlled by the engine's base system.
 	 */
 	UFUNCTION()
-	void RecursiveLoad(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool NotifyAfterFullLoaded);
+	void RecursiveLoad(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool NotifyAfterFullLoaded, int32 RecursiveDepthLoading);
 };

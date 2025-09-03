@@ -6,7 +6,7 @@
 #include "Engine/DataAsset.h"
 #include "AsyncTechnologiesSettings.h"
 
-void UAsyncDataAssetManagerSubsystem::RecursiveLoad(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool NotifyAfterFullLoaded)
+void UAsyncDataAssetManagerSubsystem::RecursiveLoad(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool NotifyAfterFullLoaded, int32 RecursiveDepthLoading)
 {
 	if (PrimaryDataAsset.IsNull())
 	{
@@ -14,6 +14,9 @@ void UAsyncDataAssetManagerSubsystem::RecursiveLoad(TSoftObjectPtr<UPrimaryDataA
 		
 		return;
 	}
+
+	if (RecursiveDepthLoading == 0)
+		return;
 
 	UPrimaryDataAsset* Asset = PrimaryDataAsset.Get();
 
@@ -37,6 +40,9 @@ void UAsyncDataAssetManagerSubsystem::RecursiveLoad(TSoftObjectPtr<UPrimaryDataA
 		return;
 	}
 
+	// Compute depth to pass children. If RecursiveDepthLoading == -1 -> keep -1 (infinite), else decrease by 1
+	int32 ChildDepth = (RecursiveDepthLoading == -1) ? -1 : (RecursiveDepthLoading - 1);
+
 	for (TSoftObjectPtr<UPrimaryDataAsset>& NestedAsset : NestedAssets)
 	{
 		// Calling asynchronous loading
@@ -53,11 +59,11 @@ void UAsyncDataAssetManagerSubsystem::RecursiveLoad(TSoftObjectPtr<UPrimaryDataA
 				continue;
 			}
 
-			AddToADAM(NestedAsset, Tag, true);
+			AddToADAM(NestedAsset, Tag, ChildDepth);
 		}
 		else
 		{
-			AddAllToADAM(NestedAsset, Tag, true);
+			AddAllToADAM(NestedAsset, Tag, ChildDepth);
 		}
 	}
 }

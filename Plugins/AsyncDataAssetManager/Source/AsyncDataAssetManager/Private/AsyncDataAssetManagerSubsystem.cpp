@@ -35,7 +35,7 @@ void UAsyncDataAssetManagerSubsystem::Deinitialize()
 #pragma endregion SUBSYSTEM
 
 #pragma region CALL_DELEGATE
-void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading)
+void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, int32 RecursiveDepthLoading)
 {
 	UPrimaryDataAsset* LoadedObject =	PrimaryDataAsset.Get();
 
@@ -47,11 +47,11 @@ void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset>
 	}
 
 	// Inform the FOnLoadedADAM subsystem delegate that the loading is complete
-	OnLoadedADAM.Broadcast(LoadedObject, PrimaryDataAsset, Tag, RecursiveLoading);
+	OnLoadedADAM.Broadcast(LoadedObject, PrimaryDataAsset, Tag, RecursiveDepthLoading);
 
-	if (RecursiveLoading && FindNestedAssets(LoadedObject).Num() != 0)
+	if (RecursiveDepthLoading != 0 && FindNestedAssets(LoadedObject).Num() != 0)
 	{
-		RecursiveLoad(PrimaryDataAsset, Tag, false);
+		RecursiveLoad(PrimaryDataAsset, Tag, false, RecursiveDepthLoading);
 	}
 
 	if (EnableLog)
@@ -63,7 +63,7 @@ void UAsyncDataAssetManagerSubsystem::OnLoaded(TSoftObjectPtr<UPrimaryDataAsset>
 	QueueADAM.Remove(PrimaryDataAsset.GetAssetName());
 }
 
-void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, bool RecursiveLoading)
+void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAsset> PrimaryDataAsset, FName Tag, int32 RecursiveDepthLoading)
 {
 	UPrimaryDataAsset* LoadedObject =	PrimaryDataAsset.Get();
 
@@ -74,9 +74,9 @@ void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAss
 		return;
 	}
 
-	if (RecursiveLoading && FindNestedAssets(LoadedObject).Num() != 0)
+	if (RecursiveDepthLoading != 0 && FindNestedAssets(LoadedObject).Num() != 0)
 	{
-		RecursiveLoad(PrimaryDataAsset, Tag, true);
+		RecursiveLoad(PrimaryDataAsset, Tag, true, RecursiveDepthLoading);
 	}
 
 	if (EnableLog)

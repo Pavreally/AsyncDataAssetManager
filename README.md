@@ -9,10 +9,10 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 > The plugin has been pre-packaged only for Win64 and Android.
 
 ## Latest Updates
-`Version 1.4.2`
+`Version 1.4.3`
 - Build version for Unreal Engine 5.6.0+
-- Refactored the method for searching nested data assets.
-- Structures and arrays of structures are now checked during recursive data asset loading.
+- Improved recursive loading option. The function parameters of `LoadADAM` and `LoadArrayADAM` have been updated. Added the ability to specify the recursion depth, allowing data to be loaded only up to a defined level of nesting.
+- `New` Added a new function `GetDataByClassADAM`. This function retrieves a filtered list of loaded data assets from ADAM’s internal memory based on class and tag. (For example, this can be useful when working with deeply nested assets required for data retrieval.)
 
 ## What it's for
 - Load and unload Data Assets asynchronously using simple functions.
@@ -41,6 +41,7 @@ An interactive step-by-step tutorial on how to use ADAM can be found in the file
 ![Window Manager](./_Misc/Tutorial/Tutorial_1.jpg)
 ![Window Manager](./_Misc/Tutorial/Tutorial_2.jpg)
 ![Window Manager](./_Misc/Tutorial/Tutorial_3.jpg)
+![Window Manager](./_Misc/Tutorial/Tutorial_4.jpg)
 
 ## (C++) Documentaion
 All sources contain self-documenting code.
