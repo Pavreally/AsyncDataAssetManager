@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.4.3",
+	"VersionName": "1.4.4",
 	"FriendlyName": "Async Data Asset Manager",
 	"Description": "Asynchronous management of data assets.",
 	"Category": "Async Technologies",
@@ -10,7 +10,7 @@
 	"DocsURL": "https://github.com/Pavreally/AsyncDataAssetManager",
 	"MarketplaceURL": "",
 	"SupportURL": "",
-	"EngineVersion": "5.6.0",
+	"EngineVersion": "5.7.0",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"Installed": true,

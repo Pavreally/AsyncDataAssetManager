@@ -177,6 +177,45 @@ void UAsyncDataAssetManagerSubsystem::FindNestedAssetsRecursive(void* Container,
 				}
 			}
 		}
+		// Handle map properties (TMap)
+		else if (const FMapProperty* MapProp = CastField<FMapProperty>(Prop))
+		{
+			FScriptMapHelper MapHelper(MapProp, MapProp->ContainerPtrToValuePtr<void>(Container));
+
+			const FProperty* KeyProp = MapProp->KeyProp;
+			const FProperty* ValueProp = MapProp->ValueProp;
+
+			for (int32 i = 0; i < MapHelper.GetMaxIndex(); ++i)
+			{
+				if (!MapHelper.IsValidIndex(i))
+					continue;
+
+				void* ValuePtr = MapHelper.GetValuePtr(i);
+
+				// Value (TSoftObjectPtr<UPrimaryDataAsset>)
+				if (const FSoftObjectProperty* ValueSoftObjectProperty = CastField<FSoftObjectProperty>(ValueProp))
+				{
+					if (ValueSoftObjectProperty->PropertyClass->IsChildOf(UPrimaryDataAsset::StaticClass()))
+					{
+						TSoftObjectPtr<UPrimaryDataAsset> ChildAsset = *reinterpret_cast<TSoftObjectPtr<UPrimaryDataAsset>*>(ValuePtr);
+						FString ChildAssetName = ChildAsset.GetAssetName();
+						if (!ChildAssetName.IsEmpty() && !UniqueAssetNames.Contains(ChildAssetName))
+						{
+							UniqueAssetNames.Add(ChildAssetName);
+							OutNestedAssets.Add(ChildAsset);
+						}
+					}
+				}
+				// Value: struct (recurse)
+				else if (const FStructProperty* ValueStructProperty = CastField<FStructProperty>(ValueProp))
+				{
+					if (ValuePtr)
+					{
+						FindNestedAssetsRecursive(ValuePtr, ValueStructProperty->Struct, OutNestedAssets, UniqueAssetNames);
+					}
+				}
+			}
+		}
 	}
 }
 

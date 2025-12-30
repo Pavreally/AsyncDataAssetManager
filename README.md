@@ -9,10 +9,10 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 > The plugin has been pre-packaged only for Win64 and Android.
 
 ## Latest Updates
-`Version 1.4.3`
-- Build version for Unreal Engine 5.6.0+
-- Improved recursive loading option. The function parameters of `LoadADAM` and `LoadArrayADAM` have been updated. Added the ability to specify the recursion depth, allowing data to be loaded only up to a defined level of nesting.
-- `New` Added a new function `GetDataByClassADAM`. This function retrieves a filtered list of loaded data assets from ADAM’s internal memory based on class and tag. (For example, this can be useful when working with deeply nested assets required for data retrieval.)
+`Version 1.4.4`
+- Build version for Unreal Engine 5.7.0+
+- Support has been added for scanning Primary Data Assets contained within a TMap data type during recursion.
+
 
 ## What it's for
 - Load and unload Data Assets asynchronously using simple functions.
@@ -30,6 +30,10 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 - Disableable debug logs allow you to monitor the entire asynchronous data management process. Plugin settings are located in `Project Settings > Plugins > Async Technologies - ADAM`.
 
 ## Install
+
+> [!NOTE]
+> Starting with Unreal Engine version 5.6, it is recommended to use the new project type based on C++. After copying the plugin folder, be sure to perform a full project rebuild in your C++ IDE.
+
 1. Make sure the Unreal Engine editor is closed.
 2. Move the "Plugins" folder to the root folder of your created project.
 3. Run your project to which the "Plugins" folder with 'AsyncDataAssetManager' was added. If a message about restoring the module appears, select "Yes".
