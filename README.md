@@ -9,9 +9,10 @@ ADAM is a plugin for Unreal Engine 5 that adds a subsystem for asynchronous load
 > The plugin has been pre-packaged only for Win64 and Android.
 
 ## Latest Updates
-`Version 1.4.4`
-- Build version for Unreal Engine 5.7.0+
-- Support has been added for scanning Primary Data Assets contained within a TMap data type during recursion.
+`Version 1.4.5`
+- Build version for Unreal Engine 5.8.3
+- Fixed missing asset name output in the debug log message.
+- Removed the minor version check in the plugin.
 
 
 ## What it's for

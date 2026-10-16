@@ -95,7 +95,11 @@ void UAsyncDataAssetManagerSubsystem::OnAllLoaded(TSoftObjectPtr<UPrimaryDataAss
 
 			if (EnableLog)
 			{
-				UE_LOG(LogTemp, Display, TEXT("ADAM (On All Loaded): All Data Assets has been loaded."), *PrimaryDataAsset.GetAssetName());
+				UE_LOG(
+   				LogTemp,
+   				Display,
+   				TEXT("ADAM (On All Loaded): All Data Assets have been loaded. Asset: %s"),
+   				*PrimaryDataAsset.GetAssetName());
 			}
 
 			QueueCounterADAM.Remove(Tag);
